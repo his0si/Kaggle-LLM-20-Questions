@@ -7,23 +7,24 @@ os.system("pip install -i https://pypi.org/simple/ -U -t /tmp/submission/lib bit
 os.system("pip cache purge")
 sys.path.insert(0, "/tmp/submission/lib")
 
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 
 model_name = "abacusai/Llama-3-Smaug-8B"
 
-bnb_config = BitsAndBytesConfig(
-    load_in_4bit = True,
-    bnb_4bit_quanty_type = "fp4", 
-    bnb_4bit_compute_dtype=torch.float16,
-    bnb_4bit_use_double_quanty = True,
-)
+# Remove BitsAndBytesConfig since it is specific to GPU usage
+# bnb_config = BitsAndBytesConfig(
+#     load_in_4bit = True,
+#     bnb_4bit_quanty_type = "fp4", 
+#     bnb_4bit_compute_dtype=torch.float16,
+#     bnb_4bit_use_double_quanty = True,
+# )
 
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
-    quantization_config = bnb_config,
-    torch_dtype = torch.float16,
-    device_map = "auto",
+    # quantization_config = bnb_config,
+    torch_dtype = torch.float32,  # Use float32 for CPU
+    # device_map = "auto",
     trust_remote_code = True,
 )
 tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -64,7 +65,7 @@ text = tokenizer.apply_chat_template(
     tokenize=False,
     add_generation_prompt=True
 )
-model_inputs = tokenizer([text], return_tensors="pt").to('cuda')
+model_inputs = tokenizer([text], return_tensors="pt").to('cpu')
 
 generated_ids = model.generate(
     model_inputs.input_ids,
@@ -113,8 +114,8 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 sys.path.insert(0, f"{KAGGLE_AGENT_PATH}lib")
 model = AutoModelForCausalLM.from_pretrained(
     f"{KAGGLE_AGENT_PATH}weights/",
-    torch_dtype = torch.float16,
-    device_map = "auto",
+    torch_dtype = torch.float32,  # Use float32 for CPU
+    # device_map = "auto",
     trust_remote_code = True,
 )
 tokenizer = AutoTokenizer.from_pretrained(f"{KAGGLE_AGENT_PATH}weights/")
@@ -170,7 +171,7 @@ def get_yes_no(question,keyword):
         tokenize=False,
         add_generation_prompt=True
     )
-    model_inputs = tokenizer([text], return_tensors="pt").to('cuda')
+    model_inputs = tokenizer([text], return_tensors="pt").to('cpu')
     
     pad_token_id = tokenizer.pad_token_id
     if pad_token_id is None:
@@ -194,7 +195,6 @@ def get_yes_no(question,keyword):
         print(f"### {prompt}")
         
     return response
-
 ############
 # MAIN AGENT FUNCTION
 def agent_fn(obs, cfg):
